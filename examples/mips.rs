@@ -9,12 +9,11 @@ use boojum::cs::cs_builder::CsBuilder;
 use boojum::cs::cs_builder::{new_builder, CsBuilderImpl};
 use boojum::cs::cs_builder_reference::CsReferenceImplementationBuilder;
 use boojum::cs::cs_builder_verifier::CsVerifierBuilder;
-use boojum::cs::gates::BooleanConstraintGate;
 use boojum::cs::gates::ConstantsAllocatorGate;
 use boojum::cs::gates::FmaGateInBaseFieldWithoutConstant;
 use boojum::cs::gates::ReductionByPowersGate;
 use boojum::cs::gates::U32AddGate;
-use boojum::cs::gates::{fma_gate_without_constant::*, NopGate, ReductionGate, ZeroCheckGate};
+use boojum::cs::gates::{fma_gate_without_constant::*, NopGate, ReductionGate, ZeroCheckGate, BooleanConstraintGate};
 use boojum::cs::implementations::pow::NoPow;
 use boojum::cs::implementations::prover::ProofConfig;
 use boojum::cs::implementations::transcript::GoldilocksPoisedonTranscript;
@@ -49,8 +48,9 @@ fn configure<T: CsBuilderImpl<F, T>, GC: GateConfigurationHolder<F>, TB: StaticT
         GatePlacementStrategy::UseGeneralPurposeColumns,
         false,
     );
-    let builder =
-        NopGate::configure_builder(builder, GatePlacementStrategy::UseGeneralPurposeColumns);
+    // let builder =
+    //     NopGate::configure_builder(builder, GatePlacementStrategy::UseGeneralPurposeColumns);
+    let builder = BooleanConstraintGate::configure_builder(builder, GatePlacementStrategy::UseGeneralPurposeColumns);
 
     builder
 }
@@ -79,17 +79,17 @@ fn multiplex() {
     let builder = configure(builder);
     let mut cs = builder.build(());
 
-    let i = cs.alloc_single_variable_from_witness(F::from_u64_unchecked(0));
-    let b = cs.alloc_single_variable_from_witness(F::from_u64_unchecked(1));
-    let c = cs.alloc_single_variable_from_witness(F::from_u64_unchecked(2));
-    let d = cs.alloc_single_variable_from_witness(F::from_u64_unchecked(3));
-    // let d = UInt32::allocate_checked(&mut cs, 3);
+    let i = UInt32::allocate_checked(&mut cs, 0);
+    let b = UInt32::allocate_checked(&mut cs, 1);
+    let c = UInt32::allocate_checked(&mut cs, 2);
+    let d = UInt32::allocate_checked(&mut cs, 3);
 
-    // let i0 = UInt32::allocated_constant(&mut cs, 0);
-    let i0 = cs.allocate_constant(F::ZERO);
-    let i1 = cs.allocate_constant(F::ONE);
-    let i2 = cs.allocate_constant(F::TWO);
+    let i0 = UInt32::allocated_constant(&mut cs, 0);
+    let i1 = UInt32::allocated_constant(&mut cs, 1);
+    let i2 = UInt32::allocated_constant(&mut cs, 2);
 
+        //let diff = a.sub(cs, b);
+        //diff.is_zero(cs)
     let b_i0 = UInt32::equals(&mut cs, &i, &i0);
     let b_i1 = UInt32::equals(&mut cs, &i, &i1);
     let b_i2 = UInt32::equals(&mut cs, &i, &i2);
