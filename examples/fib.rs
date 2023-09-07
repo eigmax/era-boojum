@@ -109,6 +109,7 @@ fn multiplex() {
     proof_config.fri_lde_factor = lde_factor_to_use;
     proof_config.pow_bits = 0;
     proof_config.merkle_tree_cap_size = 4;
+    proof_config.security_level = 1;
 
     let (proof, vk) = cs.prove_one_shot::<
         GoldilocksExt2,
@@ -116,6 +117,8 @@ fn multiplex() {
         GoldilocksPoseidonSponge<AbsorptionModeOverwrite>,
         NoPow,
         >(&worker, proof_config, ());
+    let str_proof = serde_json::to_string(&proof).unwrap();
+    println!("proof size: {}KB", str_proof.len()/1000);
 
     let builder_impl = CsVerifierBuilder::<F, GoldilocksExt2>::new_from_parameters(geometry);
     let builder = new_builder::<_, F>(builder_impl);
