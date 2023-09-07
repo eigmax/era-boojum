@@ -203,6 +203,7 @@ impl<F: PrimeField, H: TreeHasher<F>, A: GoodAllocator, B: GoodAllocator>
         let tree_depth = tree_size.trailing_zeros();
         let layers_to_skip = cap_size.trailing_zeros();
 
+        println!("{tree_size}, {cap_size}");
         assert!(tree_size > cap_size);
 
         // simplest job ever - compute by layers with parallelism
