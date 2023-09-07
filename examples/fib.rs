@@ -57,14 +57,14 @@ fn configure<T: CsBuilderImpl<F, T>, GC: GateConfigurationHolder<F>, TB: StaticT
     builder
 }
 
-/// Given input i0, i1 = 0, 1, calculate i2 = i1 + i0
+/// Given input f(0) = 0, f(1) = 1, calculate f(x) = f(x-1) + f(x-2), compute f(2**16)
 ///     let i0' = i1, i1' = i0 + i1
 fn multiplex() {
     let geometry = boojum::cs::CSGeometry {
         num_columns_under_copy_permutation: 8,
-        num_witness_columns: 3,
-        num_constant_columns: 3,
-        max_allowed_constraint_degree: 8,
+        num_witness_columns: 8,
+        num_constant_columns: 2,
+        max_allowed_constraint_degree: 16,
     };
     let max_variables = 100;
     let max_trace_len = 16;
@@ -76,29 +76,37 @@ fn multiplex() {
     let builder = configure(builder);
     let mut cs = builder.build(());
 
-    let mut i0 = cs.alloc_single_variable_from_witness(F::ZERO);
-    let mut i1 = cs.alloc_single_variable_from_witness(F::ONE);
+    let mut i0 = None;
+    let mut i1 = None;
 
     let one_variable = cs.allocate_constant(F::ONE);
 
-    for i in 0..4 {
-        let x0 = FmaGateInBaseFieldWithoutConstant::compute_fma(
+    for i in 0..8 {
+        let x0 = if let Some(i0) = i0.take() { i0 } else { cs.alloc_single_variable_from_witness(F::ZERO) };
+        let x1 = if let Some(i1) = i1.take() { i1 } else { cs.alloc_single_variable_from_witness(F::ONE) };
+        let x00 = FmaGateInBaseFieldWithoutConstant::compute_fma(
             &mut cs,
             F::ZERO,
             (one_variable, one_variable),
             F::ONE,
-            i1,
+            x1,
         );
         let x1 = FmaGateInBaseFieldWithoutConstant::compute_fma(
             &mut cs,
             F::ONE,
-            (i0, one_variable),
+            (x0, one_variable),
             F::ONE,
-            i1,
+            x1,
         );
-        i0 = x0;
-        i1 = x1;
+        i0 = Some(x00);
+        i1 = Some(x1);
     }
+    cs.set_public(0, 0);
+    cs.set_public(1, 0);
+    cs.set_public(0, 1);
+    cs.set_public(1, 1);
+    cs.set_public(0, 2);
+    cs.set_public(1, 15);
 
     let worker = Worker::new();
     cs.pad_and_shrink();
@@ -119,6 +127,9 @@ fn multiplex() {
         >(&worker, proof_config, ());
     let str_proof = serde_json::to_string(&proof).unwrap();
     println!("proof size: {}KB", str_proof.len()/1000);
+    for i in &proof.public_inputs {
+        println!("output: {}", i);
+    }
 
     let builder_impl = CsVerifierBuilder::<F, GoldilocksExt2>::new_from_parameters(geometry);
     let builder = new_builder::<_, F>(builder_impl);
@@ -135,6 +146,7 @@ fn multiplex() {
                 &proof,
             );
     assert!(is_valid);
+    println!("{is_valid}");
 }
 
 fn main() {
