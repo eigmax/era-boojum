@@ -60,7 +60,7 @@ fn configure<T: CsBuilderImpl<F, T>, GC: GateConfigurationHolder<F>, TB: StaticT
 ///    sel_0 = is_zero(instruct);
 ///    sel_1 = is_zero(instruct - 1);
 ///    sel_2 = is_zero(instruct - 2);
-///    sel_3 = is_zero(instruct);
+///    sel_3 = (1 - sel_0) * (1 - sel_1) * (1 - sel_2);
 ///    d = sel_0 * (b + c) + sel_1*(b/c) + sel_2*(b-c) + sel_3*0xFFFFFFFF
 fn multiplex() {
     let geometry = boojum::cs::CSGeometry {
@@ -88,12 +88,10 @@ fn multiplex() {
     let i1 = UInt32::allocated_constant(&mut cs, 1);
     let i2 = UInt32::allocated_constant(&mut cs, 2);
 
-        //let diff = a.sub(cs, b);
-        //diff.is_zero(cs)
     let b_i0 = UInt32::equals(&mut cs, &i, &i0);
     let b_i1 = UInt32::equals(&mut cs, &i, &i1);
     let b_i2 = UInt32::equals(&mut cs, &i, &i2);
-    let b_i3 = b_i0.or(&mut cs, b_i1).or(&mut cs, b_i2); // .ne(Boolean::allocated_constant(false));
+    let b_i3 = b_i0.or(&mut cs, b_i1).or(&mut cs, b_i2);
 
     let _0 = UInt32::allocated_constant(&mut cs, 0);
     let _f6f = UInt32::allocated_constant(&mut cs, 0xFFFFFFFF);
