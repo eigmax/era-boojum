@@ -29,7 +29,7 @@ use boojum::gadgets::traits::selectable::Selectable;
 use boojum::gadgets::traits::witnessable::WitnessHookable;
 use boojum::gadgets::u32::UInt32;
 use boojum::worker::Worker;
-
+use boojum::cs::gates::SelectionGate;
 type F = GoldilocksField;
 
 fn configure<T: CsBuilderImpl<F, T>, GC: GateConfigurationHolder<F>, TB: StaticToolboxHolder>(
@@ -48,9 +48,10 @@ fn configure<T: CsBuilderImpl<F, T>, GC: GateConfigurationHolder<F>, TB: StaticT
         GatePlacementStrategy::UseGeneralPurposeColumns,
         false,
     );
-    // let builder =
-    //     NopGate::configure_builder(builder, GatePlacementStrategy::UseGeneralPurposeColumns);
-    let builder = BooleanConstraintGate::configure_builder(builder, GatePlacementStrategy::UseGeneralPurposeColumns);
+    let builder = SelectionGate::configure_builder(builder, GatePlacementStrategy::UseGeneralPurposeColumns);
+    let builder =
+        NopGate::configure_builder(builder, GatePlacementStrategy::UseGeneralPurposeColumns);
+    // let builder = BooleanConstraintGate::configure_builder(builder, GatePlacementStrategy::UseGeneralPurposeColumns);
 
     builder
 }
@@ -64,13 +65,13 @@ fn configure<T: CsBuilderImpl<F, T>, GC: GateConfigurationHolder<F>, TB: StaticT
 ///    d = sel_0 * (b + c) + sel_1*(b/c) + sel_2*(b-c) + sel_3*0xFFFFFFFF
 fn multiplex() {
     let geometry = boojum::cs::CSGeometry {
-        num_columns_under_copy_permutation: 8,
-        num_witness_columns: 0,
-        num_constant_columns: 2,
+        num_columns_under_copy_permutation: 32,
+        num_witness_columns: 32,
+        num_constant_columns: 32,
         max_allowed_constraint_degree: 8,
     };
     let max_variables = 100;
-    let max_trace_len = 8;
+    let max_trace_len = 16;
     let builder = new_builder::<_, F>(CsReferenceImplementationBuilder::<
         GoldilocksField,
         GoldilocksField,
@@ -79,37 +80,72 @@ fn multiplex() {
     let builder = configure(builder);
     let mut cs = builder.build(());
 
-    let i = UInt32::allocate_checked(&mut cs, 0);
-    let b = UInt32::allocate_checked(&mut cs, 1);
-    let c = UInt32::allocate_checked(&mut cs, 2);
-    let d = UInt32::allocate_checked(&mut cs, 3);
+    let i = cs.alloc_single_variable_from_witness(GoldilocksField(0));
+    let b = cs.alloc_single_variable_from_witness(GoldilocksField(2));
+    let c = cs.alloc_single_variable_from_witness(GoldilocksField(1));
+    let d = cs.alloc_single_variable_from_witness(GoldilocksField(3));
 
-    let i0 = UInt32::allocated_constant(&mut cs, 0);
-    let i1 = UInt32::allocated_constant(&mut cs, 1);
-    let i2 = UInt32::allocated_constant(&mut cs, 2);
+    let zero = cs.allocate_constant(GoldilocksField::ZERO);
+    let one = cs.allocate_constant(GoldilocksField::ONE);
+    let two = cs.allocate_constant(GoldilocksField::TWO);
 
-    let b_i0 = UInt32::equals(&mut cs, &i, &i0);
-    let b_i1 = UInt32::equals(&mut cs, &i, &i1);
-    let b_i2 = UInt32::equals(&mut cs, &i, &i2);
-    let b_i3 = b_i0.or(&mut cs, b_i1).or(&mut cs, b_i2);
 
-    let _0 = UInt32::allocated_constant(&mut cs, 0);
-    let _f6f = UInt32::allocated_constant(&mut cs, 0xFFFFFFFF);
+    // i is 0
+    let tt = Num::equals(
+            &mut cs,
+            &Num::from_variable(i),
+            &Num::from_variable(zero),
+    );
+    let i_0_ = Num::conditionally_select(&mut cs, tt, &Num::from_variable(one), &Num::from_variable(zero)).get_variable();
 
-    let b_add_c = b.add_no_overflow(&mut cs, c);
-    //let b_div_c = b.non_widening_mul(c_inv);
-    let b_sub_c = b.sub_no_overflow(&mut cs, c);
+    let i_sub_1 = FmaGateInBaseFieldWithoutConstant::compute_fma(&mut cs, F::ONE, (one, i), F::MINUS_ONE, one); // i - 1 is 0
+    let tt = Num::equals(
+            &mut cs,
+            &Num::from_variable(i_sub_1),
+            &Num::from_variable(zero),
+        );
+    let i_1_ = Num::conditionally_select(&mut cs, tt, &Num::from_variable(one), &Num::from_variable(zero)).get_variable();
 
-    let it_0 = UInt32::conditionally_select(&mut cs, b_i0, &b_add_c, &_0);
-    //let it_1 = UInt32::conditionally_select(&mut cs, b_i1, &b_div_c, &_0);
-    let it_2 = UInt32::conditionally_select(&mut cs, b_i2, &b_sub_c, &_0);
-    let it_3 = UInt32::conditionally_select(&mut cs, b_i3, &_0, &_f6f);
+    let i_sub_2 = FmaGateInBaseFieldWithoutConstant::compute_fma(&mut cs, F::ONE, (one, i), F::MINUS_ONE, two); // i - 2 is 0
+    let tt = Num::equals(
+            &mut cs,
+            &Num::from_variable(i_sub_2),
+            &Num::from_variable(zero),
+        );
+    let i_2_ = Num::conditionally_select(&mut cs, tt, &Num::from_variable(one), &Num::from_variable(zero)).get_variable();
 
-    let final_ = it_0
-//        .add_no_overflow(&mut cs, it_1)
-        .add_no_overflow(&mut cs, it_2)
-        .add_no_overflow(&mut cs, it_3)
-        .sub_no_overflow(&mut cs, d);
+    let i_mul_isub1 = FmaGateInBaseFieldWithoutConstant::compute_fma(&mut cs, F::ONE, (i_sub_1, i), F::ONE, zero);
+    let i_mul_isub1_mul_isub2 = FmaGateInBaseFieldWithoutConstant::compute_fma(&mut cs, F::ONE, (i_sub_2, i_mul_isub1), F::ONE, zero); // i * (i-1) * (i-2) is NOT zero
+    let tt = Num::equals(
+            &mut cs,
+            &Num::from_variable(i_mul_isub1_mul_isub2),
+            &Num::from_variable(one),
+        );
+    let i_3_ = Num::conditionally_select(&mut cs, tt, &Num::from_variable(one), &Num::from_variable(zero)).get_variable();
+
+    // b + c
+    let b_add_c = FmaGateInBaseFieldWithoutConstant::compute_fma(&mut cs, F::ONE, (one, b), F::ONE, c);
+    let b_add_c = FmaGateInBaseFieldWithoutConstant::compute_fma(&mut cs, F::ONE, (b_add_c, i), F::ONE, zero);
+
+    // b - c
+    let b_sub_c = FmaGateInBaseFieldWithoutConstant::compute_fma(&mut cs, F::ONE, (one, b), F::MINUS_ONE, c);
+
+    // b / c
+    let c_inv = FmaGateInBaseFieldWithoutConstant::create_inversion_constraint(&mut cs, c, one); // assume c is not 0
+    let b_div_c = FmaGateInBaseFieldWithoutConstant::compute_fma(&mut cs, F::ONE, (b, c_inv), F::ONE, zero);
+
+    let f6f = cs.allocate_constant(GoldilocksField(0xFFFFFFFF));
+
+    // final = sel_0 * (b+c)
+    let final_ = FmaGateInBaseFieldWithoutConstant::compute_fma(&mut cs, F::ONE, (i_0_, b_add_c), F::ONE, zero);
+    // final += sel_1 * (b/c)
+    let final_ = FmaGateInBaseFieldWithoutConstant::compute_fma(&mut cs, F::ONE, (i_1_, b_div_c), F::ONE, final_);
+    // final += sel_2 * (b-c)
+    let final_ = FmaGateInBaseFieldWithoutConstant::compute_fma(&mut cs, F::ONE, (i_2_, b_sub_c), F::ONE, final_);
+    // final += sel_3 * 0xFFFFFFFF
+    let final_ = FmaGateInBaseFieldWithoutConstant::compute_fma(&mut cs, F::ONE, (i_3_, f6f), F::ONE, final_);
+
+    cs.set_public(0, 15);
 
     let worker = Worker::new();
     cs.pad_and_shrink();
@@ -126,6 +162,10 @@ fn multiplex() {
         GoldilocksPoseidonSponge<AbsorptionModeOverwrite>,
         NoPow,
         >(&worker, proof_config, ());
+
+    for pi in &proof.public_inputs {
+        println!("{}", pi);
+    }
 
     let builder_impl = CsVerifierBuilder::<F, GoldilocksExt2>::new_from_parameters(geometry);
     let builder = new_builder::<_, F>(builder_impl);

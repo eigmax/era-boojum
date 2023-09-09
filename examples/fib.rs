@@ -62,11 +62,11 @@ fn configure<T: CsBuilderImpl<F, T>, GC: GateConfigurationHolder<F>, TB: StaticT
 fn multiplex() {
     let geometry = boojum::cs::CSGeometry {
         num_columns_under_copy_permutation: 8,
-        num_witness_columns: 8,
+        num_witness_columns: 2,
         num_constant_columns: 2,
         max_allowed_constraint_degree: 16,
     };
-    let max_variables = 100;
+    let max_variables = 20;
     let max_trace_len = 16;
     let builder = new_builder::<_, F>(CsReferenceImplementationBuilder::<
         GoldilocksField,
@@ -81,7 +81,7 @@ fn multiplex() {
 
     let one_variable = cs.allocate_constant(F::ONE);
 
-    for i in 0..8 {
+    for i in 0..1 {
         let x0 = if let Some(i0) = i0.take() { i0 } else { cs.alloc_single_variable_from_witness(F::ZERO) };
         let x1 = if let Some(i1) = i1.take() { i1 } else { cs.alloc_single_variable_from_witness(F::ONE) };
         let x00 = FmaGateInBaseFieldWithoutConstant::compute_fma(
