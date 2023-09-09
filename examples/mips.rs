@@ -68,9 +68,9 @@ fn configure<T: CsBuilderImpl<F, T>, GC: GateConfigurationHolder<F>, TB: StaticT
 ///    d = sel_0 * (b + c) + sel_1*(b/c) + sel_2*(b-c) + sel_3*0xFFFFFFFF
 fn multiplex() {
     let geometry = boojum::cs::CSGeometry {
-        num_columns_under_copy_permutation: 32,
+        num_columns_under_copy_permutation: 16,
         num_witness_columns: 32,
-        num_constant_columns: 32,
+        num_constant_columns: 8,
         max_allowed_constraint_degree: 8,
     };
     let max_variables = 100;
@@ -232,6 +232,8 @@ fn multiplex() {
         NoPow,
         >(&worker, proof_config, ());
 
+    let str_proof = serde_json::to_string(&proof).unwrap();
+    println!("proof size: {}KB", str_proof.len() / 1000);
     for pi in &proof.public_inputs {
         println!("{}", pi);
     }
