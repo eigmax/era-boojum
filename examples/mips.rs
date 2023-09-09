@@ -214,7 +214,14 @@ fn multiplex() {
         final_,
     );
 
-    cs.set_public(0, 15);
+    cs.set_public(0, 0);
+    cs.set_public(1, 0);
+    cs.set_public(2, 0);
+    cs.set_public(3, 0);
+    cs.set_public(4, 0);
+    cs.set_public(5, 0);
+    cs.set_public(6, 0);
+    cs.set_public(7, 0);
 
     let worker = Worker::new();
     cs.pad_and_shrink();
