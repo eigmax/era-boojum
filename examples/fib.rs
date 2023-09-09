@@ -1,28 +1,30 @@
 #![feature(generic_const_exprs)]
 use boojum::algebraic_props::round_function::AbsorptionModeOverwrite;
-use boojum::cs::traits::cs::ConstraintSystem;
 use boojum::algebraic_props::sponge::GoldilocksPoseidonSponge;
-use boojum::field::U64Representable;
-use boojum::cs::gates::ConstantAllocatableCS;
 use boojum::config::DevCSConfig;
 use boojum::cs::cs_builder::CsBuilder;
 use boojum::cs::cs_builder::{new_builder, CsBuilderImpl};
 use boojum::cs::cs_builder_reference::CsReferenceImplementationBuilder;
 use boojum::cs::cs_builder_verifier::CsVerifierBuilder;
+use boojum::cs::gates::ConstantAllocatableCS;
 use boojum::cs::gates::ConstantsAllocatorGate;
 use boojum::cs::gates::FmaGateInBaseFieldWithoutConstant;
 use boojum::cs::gates::ReductionByPowersGate;
 use boojum::cs::gates::U32AddGate;
-use boojum::cs::gates::{fma_gate_without_constant::*, NopGate, ReductionGate, ZeroCheckGate, BooleanConstraintGate};
+use boojum::cs::gates::{
+    fma_gate_without_constant::*, BooleanConstraintGate, NopGate, ReductionGate, ZeroCheckGate,
+};
 use boojum::cs::implementations::pow::NoPow;
 use boojum::cs::implementations::prover::ProofConfig;
 use boojum::cs::implementations::transcript::GoldilocksPoisedonTranscript;
+use boojum::cs::traits::cs::ConstraintSystem;
 use boojum::cs::traits::gate::GatePlacementStrategy;
 use boojum::cs::GateConfigurationHolder;
 use boojum::cs::StaticToolboxHolder;
 use boojum::field::goldilocks::GoldilocksExt2;
 use boojum::field::goldilocks::GoldilocksField;
 use boojum::field::Field;
+use boojum::field::U64Representable;
 use boojum::gadgets::boolean::Boolean;
 use boojum::gadgets::num::Num;
 use boojum::gadgets::traits::selectable::Selectable;
@@ -82,8 +84,16 @@ fn multiplex() {
     let one_variable = cs.allocate_constant(F::ONE);
 
     for i in 0..1 {
-        let x0 = if let Some(i0) = i0.take() { i0 } else { cs.alloc_single_variable_from_witness(F::ZERO) };
-        let x1 = if let Some(i1) = i1.take() { i1 } else { cs.alloc_single_variable_from_witness(F::ONE) };
+        let x0 = if let Some(i0) = i0.take() {
+            i0
+        } else {
+            cs.alloc_single_variable_from_witness(F::ZERO)
+        };
+        let x1 = if let Some(i1) = i1.take() {
+            i1
+        } else {
+            cs.alloc_single_variable_from_witness(F::ONE)
+        };
         let x00 = FmaGateInBaseFieldWithoutConstant::compute_fma(
             &mut cs,
             F::ZERO,
@@ -126,7 +136,7 @@ fn multiplex() {
         NoPow,
         >(&worker, proof_config, ());
     let str_proof = serde_json::to_string(&proof).unwrap();
-    println!("proof size: {}KB", str_proof.len()/1000);
+    println!("proof size: {}KB", str_proof.len() / 1000);
     for i in &proof.public_inputs {
         println!("output: {}", i);
     }
