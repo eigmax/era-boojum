@@ -80,18 +80,22 @@ fn multiplex() {
 
     let mut i0 = None;
     let mut i1 = None;
+    let mut xx0 = 0;
+    let mut xx1 = 0;
 
     let one_variable = cs.allocate_constant(F::ONE);
 
-    for i in 0..1 {
+    for i in 0..4 {
         let x0 = if let Some(i0) = i0.take() {
             i0
         } else {
+            xx0 = 0;
             cs.alloc_single_variable_from_witness(F::ZERO)
         };
         let x1 = if let Some(i1) = i1.take() {
             i1
         } else {
+            xx1 = 1;
             cs.alloc_single_variable_from_witness(F::ONE)
         };
         let x00 = FmaGateInBaseFieldWithoutConstant::compute_fma(
@@ -108,6 +112,10 @@ fn multiplex() {
             F::ONE,
             x1,
         );
+        let tmp = xx0;
+        xx0 = xx1;
+        xx1 = tmp + xx1;
+
         i0 = Some(x00);
         i1 = Some(x1);
     }
@@ -118,12 +126,8 @@ fn multiplex() {
     cs.set_public(4, 0);
     cs.set_public(5, 0);
 
-    cs.set_public(0, 1);
-    cs.set_public(1, 1);
-    cs.set_public(2, 1);
-    cs.set_public(3, 1);
-    cs.set_public(4, 1);
-    cs.set_public(5, 1);
+    assert_eq!((Num::from_variable(i0.unwrap()).witness_hook(&cs))().unwrap(), xx0);
+    assert_eq!((Num::from_variable(i1.unwrap()).witness_hook(&cs))().unwrap(), xx1);
 
     let worker = Worker::new();
     cs.pad_and_shrink();
@@ -152,6 +156,7 @@ fn multiplex() {
     let builder = new_builder::<_, F>(builder_impl);
 
     let builder = configure(builder);
+
     let verifier = builder.build(());
     let is_valid = verifier.verify::<
         GoldilocksPoseidonSponge<AbsorptionModeOverwrite>,

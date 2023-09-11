@@ -83,10 +83,12 @@ fn multiplex() {
     let builder = configure(builder);
     let mut cs = builder.build(());
 
-    let i = cs.alloc_single_variable_from_witness(GoldilocksField(0));
+    let i_out = 1;
+    let b_add_c = 2;
+    let i = cs.alloc_single_variable_from_witness(GoldilocksField(i_out));
     let b = cs.alloc_single_variable_from_witness(GoldilocksField(2));
     let c = cs.alloc_single_variable_from_witness(GoldilocksField(1));
-    let d = cs.alloc_single_variable_from_witness(GoldilocksField(3));
+    let d = cs.alloc_single_variable_from_witness(GoldilocksField(b_add_c));
 
     let zero = cs.allocate_constant(GoldilocksField::ZERO);
     let one = cs.allocate_constant(GoldilocksField::ONE);
@@ -167,8 +169,6 @@ fn multiplex() {
     // b + c
     let b_add_c =
         FmaGateInBaseFieldWithoutConstant::compute_fma(&mut cs, F::ONE, (one, b), F::ONE, c);
-    let b_add_c =
-        FmaGateInBaseFieldWithoutConstant::compute_fma(&mut cs, F::ONE, (b_add_c, i), F::ONE, zero);
 
     // b - c
     let b_sub_c =
@@ -214,14 +214,23 @@ fn multiplex() {
         final_,
     );
 
+    let final_ = FmaGateInBaseFieldWithoutConstant::compute_fma(
+        &mut cs,
+        F::ONE,
+        (one, final_),
+        F::MINUS_ONE,
+        d
+    );
+
     cs.set_public(0, 0);
     cs.set_public(1, 0);
     cs.set_public(2, 0);
     cs.set_public(3, 0);
-    cs.set_public(4, 0);
-    cs.set_public(5, 0);
-    cs.set_public(6, 0);
-    cs.set_public(7, 0);
+
+    assert_eq!((Num::from_variable(i).witness_hook(&cs))().unwrap(), i_out);
+    assert_eq!((Num::from_variable(i).witness_hook(&cs))().unwrap(), i_out);
+    let final_out = 0;
+    assert_eq!((Num::from_variable(final_).witness_hook(&cs))().unwrap(), final_out);
 
     let worker = Worker::new();
     cs.pad_and_shrink();
