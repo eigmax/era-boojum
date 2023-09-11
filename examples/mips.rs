@@ -83,12 +83,12 @@ fn multiplex() {
     let builder = configure(builder);
     let mut cs = builder.build(());
 
-    let i_out = 1;
-    let b_add_c = 2;
+    let i_out = 0;
+    let b_add_c_out = 3;
     let i = cs.alloc_single_variable_from_witness(GoldilocksField(i_out));
     let b = cs.alloc_single_variable_from_witness(GoldilocksField(2));
     let c = cs.alloc_single_variable_from_witness(GoldilocksField(1));
-    let d = cs.alloc_single_variable_from_witness(GoldilocksField(b_add_c));
+    let d = cs.alloc_single_variable_from_witness(GoldilocksField(b_add_c_out));
 
     let zero = cs.allocate_constant(GoldilocksField::ZERO);
     let one = cs.allocate_constant(GoldilocksField::ONE);
@@ -228,7 +228,7 @@ fn multiplex() {
     cs.set_public(3, 0);
 
     assert_eq!((Num::from_variable(i).witness_hook(&cs))().unwrap(), i_out);
-    assert_eq!((Num::from_variable(i).witness_hook(&cs))().unwrap(), i_out);
+    assert_eq!((Num::from_variable(b_add_c).witness_hook(&cs))().unwrap(), b_add_c_out);
     let final_out = 0;
     assert_eq!((Num::from_variable(final_).witness_hook(&cs))().unwrap(), final_out);
 
