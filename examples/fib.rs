@@ -85,8 +85,7 @@ fn multiplex() {
 
     let one_variable = cs.allocate_constant(F::ONE);
 
-    let _max = 1 << 6;
-    for i in 0.._max {
+    for i in 0..1 {
         let x0 = if let Some(i0) = i0.take() {
             i0
         } else {
