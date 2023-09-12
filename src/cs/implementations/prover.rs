@@ -627,7 +627,7 @@ impl<
         let total_num_terms =
             total_num_lookup_argument_terms // and lookup is first
             + total_num_gate_terms_for_specialized_columns // then gates over specialized columns
-            + total_num_gate_terms_for_general_purpose_columns // all getes terms over general purpose columns 
+            + total_num_gate_terms_for_general_purpose_columns // all getes terms over general purpose columns
             + 1 // z(1) == 1 copy permutation
             + 1 // z(x * omega) = ...
             + num_intermediate_partial_product_relations // chunking copy permutation part
@@ -2106,6 +2106,7 @@ impl<
             lde_factor_for_fri.trailing_zeros(),
             domain_size.trailing_zeros(),
         );
+        log!("fri config: num query {num_queries}");
 
         dbg!(&interpolation_log2s_schedule);
         dbg!(cap_size);

@@ -68,8 +68,8 @@ fn multiplex() {
         num_constant_columns: 2,
         max_allowed_constraint_degree: 16,
     };
-    let max_variables = 20;
-    let max_trace_len = 16;
+    let max_variables = 1 << 8;
+    let max_trace_len = 1 << 18;
     let builder = new_builder::<_, F>(CsReferenceImplementationBuilder::<
         GoldilocksField,
         GoldilocksField,
@@ -85,7 +85,8 @@ fn multiplex() {
 
     let one_variable = cs.allocate_constant(F::ONE);
 
-    for i in 0..4 {
+    let _max = 1 << 6;
+    for i in 0.._max {
         let x0 = if let Some(i0) = i0.take() {
             i0
         } else {
@@ -138,7 +139,9 @@ fn multiplex() {
     proof_config.fri_lde_factor = lde_factor_to_use;
     proof_config.pow_bits = 0;
     proof_config.merkle_tree_cap_size = 4;
-    proof_config.security_level = 1;
+    proof_config.security_level = 2;
+
+    let now = std::time::Instant::now();
 
     let (proof, vk) = cs.prove_one_shot::<
         GoldilocksExt2,
@@ -146,8 +149,10 @@ fn multiplex() {
         GoldilocksPoseidonSponge<AbsorptionModeOverwrite>,
         NoPow,
         >(&worker, proof_config, ());
+    let elapsed_time = now.elapsed();
+    println!("Running prove_one_shot() took {} seconds.", elapsed_time.as_secs());
     let str_proof = serde_json::to_string(&proof).unwrap();
-    println!("proof size: {}KB", str_proof.len() / 1000);
+    println!("proof size: {} KB", str_proof.len() as f32 / 1000.0);
     for i in &proof.public_inputs {
         println!("output: {}", i);
     }
